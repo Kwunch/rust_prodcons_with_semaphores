@@ -1,4 +1,6 @@
 /*
+    @Author: Kwunch
+    
     * SemTrait.rs
 
     * This file contains the trait for the Semaphore struct.

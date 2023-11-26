@@ -1,4 +1,6 @@
 /*
+    @Author: Kwunch
+
     * Rust implementation of producer-consumer problem
 
     * Uses both binary and counting semaphores. (based off user input)
@@ -51,7 +53,7 @@ static IDS: [char; 26] = [
 
 fn main() {
     let is_binary: bool; // Used to determine which prod/con to call
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().collect(); // Get args
 
     // Create threads vector
     let mut threads: Vec<JoinHandle<()>> = Vec::new();
@@ -80,12 +82,25 @@ fn main() {
     unsafe {
         SEMMUTEX = match args[1].to_lowercase().as_str() {
             "-c" if args.len() == 5 => {
+                /*
+                    * Create 3 counting semaphores.
+                    * First is mutex, second is empty, third is full.
+                    * Empty is initialized to BUFFER size.
+
+                    * Set is_binary to false.
+                    * SEMMUTEX is initialized from the last match statement.
+                */
                 is_binary = false;
                 SEMEMPTY = Some(Box::new(CountingSem::new(buffer_size as i32)));
                 SEMFULL = Some(Box::new(CountingSem::new(0)));
                 Some(Box::new(CountingSem::new(1)))
             }
             "-b" if args.len() == 5 => {
+                /*
+                    * Create binary semaphore.
+
+                    * Set is_binary to true.
+                */
                 is_binary = true;
                 Some(Box::new(BinarySem::new()))
             }
@@ -118,6 +133,13 @@ fn main() {
 
     // Create producer threads
     for i in 0..num_producers {
+        /*
+            * Create producer threads.
+            * If is_binary is true, call bin_producer. (binary semaphore)
+            * If is_binary is false, call cou_producer. (counting semaphore)
+
+            * Each thread pushes itself to the threads vector.
+        */
         if is_binary {
             threads.push(spawn(move || unsafe {
                 bin_producer(IDS[i], &buffer_size);
@@ -131,6 +153,13 @@ fn main() {
 
     // Create consumer threads
     for i in 0..num_consumers {
+        /*
+            * Create consumer threads.
+            * If is_binary is true, call bin_consumer. (binary semaphore)
+            * If is_binary is false, call cou_consumer. (counting semaphore)
+
+            * Each thread pushes itself to the threads vector.
+        */
         if is_binary {
             threads.push(spawn(move || unsafe {
                 bin_consumer(IDS[i], &buffer_size);
@@ -156,6 +185,12 @@ fn main() {
 }
 
 unsafe fn bin_producer(id: char, buffer_size: &usize) {
+    /*
+        * Producer function for binary semaphore.
+
+        * Producer will increment 'total' by 1 and add it to the BUFFER.
+        * Producer will print what it added to the BUFFER.
+    */
     let mutex = SEMMUTEX.as_mut().unwrap();
     while !END_FLAG {
         mutex.wait();
@@ -171,6 +206,12 @@ unsafe fn bin_producer(id: char, buffer_size: &usize) {
 }
 
 unsafe fn bin_consumer(id: char, buffer_size: &usize) {
+    /*
+        * Consumer function for binary semaphore.
+
+        * Consumer will read from BUFFER.
+        * Consumer will print what it read from BUFFER.
+    */
     let mutex = SEMMUTEX.as_mut().unwrap();
     while !END_FLAG {
         mutex.wait();
@@ -184,6 +225,12 @@ unsafe fn bin_consumer(id: char, buffer_size: &usize) {
 }
 
 unsafe fn cou_producer(id: char, buffer_size: &usize) {
+    /*
+        * Producer function for counting semaphore.
+
+        * Producer will increment 'total' by 1 and add it to the BUFFER.
+        * Producer will print what it added to the BUFFER.
+    */
     let mutex = SEMMUTEX.as_mut().unwrap();
     let empty = SEMEMPTY.as_mut().unwrap();
     let full = SEMFULL.as_mut().unwrap();
@@ -203,6 +250,12 @@ unsafe fn cou_producer(id: char, buffer_size: &usize) {
 }
 
 unsafe fn cou_consumer(id: char, buffer_size: &usize) {
+    /*
+        * Consumer function for counting semaphore.
+
+        * Consumer will read from BUFFER.
+        * Consumer will print what it read from BUFFER.
+    */
     let mutex = SEMMUTEX.as_mut().unwrap();
     let empty = SEMEMPTY.as_mut().unwrap();
     let full = SEMFULL.as_mut().unwrap();

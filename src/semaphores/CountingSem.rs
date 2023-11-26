@@ -1,4 +1,6 @@
 /*
+    @Author: Kwunch
+
     * CountingSem.rs
 
     * Implementation of a counting semaphore.

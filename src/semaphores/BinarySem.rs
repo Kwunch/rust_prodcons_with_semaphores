@@ -1,4 +1,6 @@
 /*
+    @Author: Kwunch
+
     * BinarySem.rs
 
     * This module contains the implementation of a binary semaphore.
