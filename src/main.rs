@@ -34,12 +34,20 @@ static mut IN: usize = 0;
 static mut OUT: usize = 0;
 static mut TOTAL: u64 = 0;
 
+// Vars: semaphores, buffer
 static mut SEMMUTEX: Option<Box<dyn SemTrait>> = None;
 static mut SEMEMPTY: Option<Box<dyn SemTrait>> = None;
 static mut SEMFULL: Option<Box<dyn SemTrait>> = None;
 static mut BUFFER: Vec<u64> = Vec::new();
 
+// Vars: end_flag (used to determine when to end program)
 static mut END_FLAG: bool = false;
+
+// Vars: Alphabetic characters (used for producer/consumer id)
+static IDS: [char; 26] = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+];
 
 fn main() {
     let is_binary: bool; // Used to determine which prod/con to call
@@ -109,27 +117,27 @@ fn main() {
     };
 
     // Create producer threads
-    for _ in 0..num_producers {
+    for i in 0..num_producers {
         if is_binary {
             threads.push(spawn(move || unsafe {
-                bin_producer(&buffer_size);
+                bin_producer(IDS[i], &buffer_size);
             }));
         } else {
             threads.push(spawn(move || unsafe {
-                cou_producer(&buffer_size);
+                cou_producer(IDS[i], &buffer_size);
             }));
         }
     }
 
     // Create consumer threads
-    for _ in 0..num_consumers {
+    for i in 0..num_consumers {
         if is_binary {
             threads.push(spawn(move || unsafe {
-                bin_consumer(&buffer_size);
+                bin_consumer(IDS[i], &buffer_size);
             }));
         } else {
             threads.push(spawn(move || unsafe {
-                cou_consumer(&buffer_size);
+                cou_consumer(IDS[i], &buffer_size);
             }));
         }
     }
@@ -147,7 +155,7 @@ fn main() {
     println!("Enter pressed and threads finished...");
 }
 
-unsafe fn bin_producer(buffer_size: &usize) {
+unsafe fn bin_producer(id: char, buffer_size: &usize) {
     let mutex = SEMMUTEX.as_mut().unwrap();
     while !END_FLAG {
         mutex.wait();
@@ -155,27 +163,27 @@ unsafe fn bin_producer(buffer_size: &usize) {
         // Critical section
         BUFFER[IN] = TOTAL;
         TOTAL += 1;
-        println!("Produced: {}", BUFFER[IN]);
+        println!("Producer {} Produced: {}", id, BUFFER[IN]);
         IN = (IN + 1) % *buffer_size;
 
         mutex.signal();
     }
 }
 
-unsafe fn bin_consumer(buffer_size: &usize) {
+unsafe fn bin_consumer(id: char, buffer_size: &usize) {
     let mutex = SEMMUTEX.as_mut().unwrap();
     while !END_FLAG {
         mutex.wait();
 
         // Critical section
-        println!("Consumed: {}", BUFFER[OUT]);
+        println!("Consumer {} Consumed: {}", id, BUFFER[OUT]);
         OUT = (OUT + 1) % *buffer_size;
 
         mutex.signal();
     }
 }
 
-unsafe fn cou_producer(buffer_size: &usize) {
+unsafe fn cou_producer(id: char, buffer_size: &usize) {
     let mutex = SEMMUTEX.as_mut().unwrap();
     let empty = SEMEMPTY.as_mut().unwrap();
     let full = SEMFULL.as_mut().unwrap();
@@ -186,7 +194,7 @@ unsafe fn cou_producer(buffer_size: &usize) {
         // Critical section
         BUFFER[IN] = TOTAL;
         TOTAL += 1;
-        println!("Produced: {}", BUFFER[IN]);
+        println!("Producer {} Produced: {}", id, BUFFER[IN]);
         IN = (IN + 1) % *buffer_size;
 
         mutex.signal();
@@ -194,7 +202,7 @@ unsafe fn cou_producer(buffer_size: &usize) {
     }
 }
 
-unsafe fn cou_consumer(buffer_size: &usize) {
+unsafe fn cou_consumer(id: char, buffer_size: &usize) {
     let mutex = SEMMUTEX.as_mut().unwrap();
     let empty = SEMEMPTY.as_mut().unwrap();
     let full = SEMFULL.as_mut().unwrap();
@@ -204,7 +212,7 @@ unsafe fn cou_consumer(buffer_size: &usize) {
         mutex.wait();
 
         // Critical section
-        println!("Consumed: {}", BUFFER[OUT]);
+        println!("Consumer {} Consumed: {}", id, BUFFER[OUT]);
         OUT = (OUT + 1) % *buffer_size;
 
         mutex.signal();
